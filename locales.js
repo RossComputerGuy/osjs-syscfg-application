@@ -8,4 +8,4 @@ const en_US = {
 	NOTIF_BATTERY_LOW: "Battery is low, please charge device."
 };
 
-module.exports = {en_US};
+module.exports = {en_US, en_EN: en_US };

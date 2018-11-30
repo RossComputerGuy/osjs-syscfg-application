@@ -81,14 +81,16 @@ const register = (core,args,options,metadata) => {
 						});
 					}
 				});
+				var shouldAlert = true;
 				intervals.push(setInterval(async () => {
 					const battery = await hw.battery.get();
-					if(battery.percent <= 20) {
+					if(battery.percent <= 20 && shouldAlert) {
 						core.make("osjs/notification",{
 							message: _("NOTIF_BATTERY_LOW"),
 							icon: core.make("osjs/theme").icon(batteryIcon(battery.percent,battery.ischarging))
 						});
-					}
+						shouldAlert = false;
+					} else shouldAlert = true;
 					entry.update({
 						title: _("ITEM_BATTERY_CHARGE",battery.percent),
 						icon: core.make("osjs/theme").icon(batteryIcon(battery.percent,battery.ischarging))
