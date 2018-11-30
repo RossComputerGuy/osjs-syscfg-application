@@ -30,11 +30,11 @@ const batteryIcon = (percent,ischarging) => {
 	return "battery";
 };
 
-const createBatteryDetailsDialog = core => {
+const createBatteryDetailsDialog = (core,_) => {
 	const hw = core.make("hw");
 	core.make("osjs/dialogs").create({
 		buttons: ["close"],
-		window: { title: "Battery Details", dimension: { width: 200, height: 400 }, icon: core.make("osjs/theme").icon("battery") }
+		window: { title: _("DIALOG_BATTERY_TITLE"), dimension: { width: 200, height: 400 }, icon: core.make("osjs/theme").icon("battery") }
 	},dialog => null,(btn,value,dialog) => {}).render(async ($content,dialogWindow,dialog) => {
 		dialog.app = app({
 			battery: await hw.battery.get()
@@ -59,39 +59,41 @@ const createBatteryDetailsDialog = core => {
 
 const register = (core,args,options,metadata) => {
 	const proc = core.make("osjs/application",{args,options,metadata});
+	const {translatable} = core.make("osjs/locale");
+	const _ = translatable(require("./locales.js"));
 	try {
 		const hw = core.make("hw");
 		var intervals = [];
 		hw.battery.get().then(bat => {
 			if(bat.hasbattery) {
 				var entry = core.make("osjs/tray",{
-					title: bat.percent+"% Full",
+					title: _("ITEM_BATTERY_CHARGE",bat.percent),
 					icon: core.make("osjs/theme").icon(batteryIcon(bat.percent,bat.ischarging)),
 					onclick: async ev => {
 						const battery = await hw.battery.get();
 						core.make("osjs/contextmenu").show({
 							position: ev.target,
 							menu: [
-								{ label: battery.percent+"% Full" },
-								{ label: strftime("%H:%M",new Date(battery.timeremaining*1000))+" Left" },
-								{ label: "Details", onclick: () => createBatteryDetailsDialog(core) }
+								{ label: _("ITEM_BATTERY_CHARGE",battery.percent) },
+								{ label: _("ITEM_BATTERY_TIME",strftime("%H:%M",new Date(battery.timeremaining*1000))) },
+								{ label: _("ITEM_BATTERY_DETAILS"), onclick: () => createBatteryDetailsDialog(core,_) }
 							]
 						});
 					}
 				});
-				setInterval(async () => {
+				intervals.push(setInterval(async () => {
 					const battery = await hw.battery.get();
 					if(battery.percent <= 20) {
 						core.make("osjs/notification",{
-							message: "Battery is low, please charge device.",
+							message: _("NOTIF_BATTERY_LOW"),
 							icon: core.make("osjs/theme").icon(batteryIcon(battery.percent,battery.ischarging))
 						});
 					}
 					entry.update({
-						title: battery.percent+"% Full",
+						title: _("ITEM_BATTERY_CHARGE",battery.percent),
 						icon: core.make("osjs/theme").icon(batteryIcon(battery.percent,battery.ischarging))
 					});
-				},1000);
+				},1000));
 				proc.on("destroy",() => entry.destroy());
 			}
 		}).catch(err => {
