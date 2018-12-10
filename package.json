@@ -1,5 +1,5 @@
 {
-  "name": "osjs-sysinfo-application",
+  "name": "osjs-syscfg-application",
   "version": "1.0.3",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",

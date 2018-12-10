@@ -1,16 +1,16 @@
 {
   "type": "application",
-  "name": "SystemInfo",
+  "name": "SystemConfig",
   "category": null,
   "autostart": true,
   "singleton": true,
   "hidden": true,
   "server": "server.js",
   "title": {
-    "en_EN": "System Info"
+    "en_EN": "System Configuration"
   },
   "description": {
-    "en_EN": "System Info"
+    "en_EN": "System Configuration"
   },
   "files": [
     "main.js",
