@@ -77,6 +77,7 @@ const register = (core,args,options,metadata) => {
 		var intervals = [];
 		core.make('osjs/dbus').systemBus().then(dbus => {
 	    const nmDevHandler = dev => ({
+	      'BRIDGE': () => {},
 	      'ETHERNET': () => {
 	        const devIface = dbus.interface('org.freedesktop.NetworkManager',dev,'org.freedesktop.NetworkManager.Device.Wired');
 	        let devStats = [];
@@ -220,7 +221,9 @@ const register = (core,args,options,metadata) => {
 		      devIface.props().then(props => {
 		        let type = NM_DEVICE_TYPE[props.DeviceType];
 		        console.log('Found a '+type+' device at \"'+dev+'\"');
-		        let devHandler = nmDevHandler(dev)[type] || function() {};
+		        let devHandler = nmDevHandler(dev)[type] || () => {
+		          core.make('osjs/dialog','alert',{ message: _('DEV_MISSING',type) },(btn, value) => {});
+		        };
 		        devHandler();
 		      }).catch(err => {
 		        throw err;
