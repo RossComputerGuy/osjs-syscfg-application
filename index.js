@@ -117,6 +117,20 @@ const register = (core,args,options,metadata) => {
               }).catch(err => {
                 core.make('osjs/dialog','alert',{ message: ex.message, title: ex.name },(btn, value) => {});
               });
+            },
+            oninput: value => {
+              sink.volume = value;
+		          entry.update({
+		            icon: core.make('osjs/theme').icon(!sink.enabled ? [
+		              'audio-volume-low',
+		              'audio-volume-medium',
+		              'audio-volume-high'
+		            ][getLevel()] : 'audio-volume-muted')
+              });
+              hw.audio.setSinkVolumes(sink.index,sink.volume+'%').then(() => {
+              }).catch(err => {
+                core.make('osjs/dialog','alert',{ message: ex.message, title: ex.name },(btn, value) => {});
+              });
             }
           },[]), closeable: false }
 		    ];
@@ -188,6 +202,20 @@ const register = (core,args,options,metadata) => {
             value: getVolume(),
             onchange: ev => {
               source.volume = ev.target.value;
+		          entry.update({
+		            icon: core.make('osjs/theme').icon(!source.enabled ? [
+                  (isInput() ? 'microphone-sensitivity' : 'audio-volume')+'-low',
+                  (isInput() ? 'microphone-sensitivity' : 'audio-volume')+'-medium',
+                  (isInput() ? 'microphone-sensitivity' : 'audio-volume')+'-high'
+                ][getLevel()] : (isInput() ? 'microphone-sensitivity' : 'audio-volume')+'-muted')
+		          });
+              hw.audio.setSourceVolumes(source.index,source.volume+'%').then(() => {
+              }).catch(err => {
+                core.make('osjs/dialog','alert',{ message: ex.message, title: ex.name },(btn, value) => {});
+              });
+            },
+            oninput: value => {
+              source.volume = value;
 		          entry.update({
 		            icon: core.make('osjs/theme').icon(!source.enabled ? [
                   (isInput() ? 'microphone-sensitivity' : 'audio-volume')+'-low',
