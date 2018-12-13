@@ -16,7 +16,7 @@
     "sysinfo"
   ],
   "dependencies": {
-    "@osjs/gui": "^4.0.8",
+    "@osjs/gui": "^4.0.12",
     "hyperapp": "^1.2.9",
     "strftime": "^0.10.0"
   },

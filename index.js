@@ -9,7 +9,7 @@ import {
 } from 'hyperapp';
 
 import {
-	Box,BoxContainer,Button,Icon,Menubar,MenubarItem,Video
+	Box,BoxContainer,Button,Icon,Menubar,MenubarItem,RangeField,Video
 } from '@osjs/gui';
 
 const NM_DEVICE_TYPE = [
@@ -69,15 +69,164 @@ const createBatteryDetailsDialog = (core,_) => {
 };
 
 const register = (core,args,options,metadata) => {
-	const proc = core.make('osjs/application',{args,options,metadata});
-	const {translatable} = core.make('osjs/locale');
-	const _ = translatable(require('./locales.js'));
-	try {
-		const hw = core.make('hw');
-		var intervals = [];
+  const proc = core.make('osjs/application',{args,options,metadata});
+  const {translatable} = core.make('osjs/locale');
+  const _ = translatable(require('./locales.js'));
+  try {
+    const hw = core.make('hw');
+    var intervals = [];
+    hw.audio.getSinks().then(sinks => {
+      let entries = [];
+      const createEntry = sink => {
+        let getVolume = () => sink.volume;
+        let getLevel = () => {
+          let vol = getVolume();
+          if(vol <= 33) return 0;
+          if(vol <= 66) return 1;
+          return 2;
+        };
+        let entry = null;
+        let menu = [
+          { label: _('AUDIO_MUTE'), checked: sink.muted, onclick: ev => {
+		        hw.audio.setSinkMute(sink.index,!ev.checked,(err,enabled) => {
+		          if(err) return core.make('osjs/dialog','alert',{ message: err.message, title: err.name },(btn, value) => {});
+		          menu[0].checked = sink.muted = ev.checked = enabled;
+		          entry.update({
+		            icon: core.make('osjs/theme').icon(!enabled ? [
+		              'audio-volume-low',
+		              'audio-volume-medium',
+		              'audio-volume-high'
+		            ][getLevel()] : 'audio-volume-muted')
+              });
+            });
+          } },
+          { element: () => h(RangeField,{
+            min: 0,
+            max: 100,
+            value: sink.volume,
+            onchange: ev => {
+              sink.volume = ev.target.value;
+		          entry.update({
+		            icon: core.make('osjs/theme').icon(!sink.enabled ? [
+		              'audio-volume-low',
+		              'audio-volume-medium',
+		              'audio-volume-high'
+		            ][getLevel()] : 'audio-volume-muted')
+              });
+              hw.audio.setSinkVolumes(sink.index,sink.volume+'%').then(() => {
+              }).catch(err => {
+                core.make('osjs/dialog','alert',{ message: ex.message, title: ex.name },(btn, value) => {});
+              });
+            }
+          },[]), closeable: false }
+		    ];
+		    entry = core.make('osjs/tray',{
+		      icon: core.make('osjs/theme').icon(!sink.muted ? [
+            'audio-volume-low',
+            'audio-volume-medium',
+            'audio-volume-high'
+          ][getLevel()] : 'audio-volume-muted'),
+		      title: sink.description,
+		      onclick: ev => {
+				    core.make('osjs/contextmenu').show({
+				      position: ev.target,
+				      menu: menu
+				    });
+		      }
+		    });
+        entries.push(entry);
+		  };
+		  for(let sink of sinks) createEntry(sink);
+      proc.on('destroy',() => entries.forEach(entry => entry.destroy()));
+		}).catch(err => {
+      core.make('osjs/dialog','alert',{ message: ex.message, title: ex.name },(btn, value) => {});
+		});
+		hw.audio.getSources().then(sources => {
+		  let entries = [];
+		  const createEntry = source => {
+		    let getSourceData = () => new Promise((resolve,reject) => {
+		      hw.audio.pactl('list sources').then(output => {
+		        let data = output.lines.slice(output.lines.indexOf('Source #'+source.index),output.lines.indexOf('',output.lines.indexOf('Source #'+source.index)));
+		        if(data.length == 0) return reject(new Error('Failed to find source'));
+		        resolve(data);
+		      }).catch(reject);
+		    });
+		    let getVolume = () => source.volume;
+		    let getType = () => source.name.split('.')[0].split('_')[1];
+		    let isInput = () => getType() == 'input';
+		    let isOutput = () => getType() == 'output';
+		    const icons = [
+          (isInput() ? 'microphone-sensitivity' : 'audio-volume')+'-low',
+          (isInput() ? 'microphone-sensitivity' : 'audio-volume')+'-medium',
+          (isInput() ? 'microphone-sensitivity' : 'audio-volume')+'-high'
+        ];
+        const mutedIcon = (isInput() ? 'microphone-sensitivity' : 'audio-volume')+'-muted';
+		    let getLevel = () => {
+		      let vol = getVolume();
+		      if(vol <= 33) return 0;
+		      if(vol <= 66) return 1;
+		      return 2;
+		    };
+		    let entry = null;
+		    let menu = [
+		      { label: _('AUDIO_MUTE'), checked: source.muted, onclick: ev => {
+		        hw.audio.setSourceMute(source.index,!ev.checked,(err,enabled) => {
+		          if(err) return core.make('osjs/dialog','alert',{ message: err.message, title: err.name },(btn, value) => {});
+		          menu[0].checked = source.muted = ev.checked = enabled;
+		          entry.update({
+		            icon: core.make('osjs/theme').icon(!enabled ? [
+                  (isInput() ? 'microphone-sensitivity' : 'audio-volume')+'-low',
+                  (isInput() ? 'microphone-sensitivity' : 'audio-volume')+'-medium',
+                  (isInput() ? 'microphone-sensitivity' : 'audio-volume')+'-high'
+                ][getLevel()] : (isInput() ? 'microphone-sensitivity' : 'audio-volume')+'-muted')
+		          });
+		        });
+          } },
+          { element: () => h(RangeField,{
+            min: 0,
+            max: 100,
+            value: getVolume(),
+            onchange: ev => {
+              source.volume = ev.target.value;
+		          entry.update({
+		            icon: core.make('osjs/theme').icon(!source.enabled ? [
+                  (isInput() ? 'microphone-sensitivity' : 'audio-volume')+'-low',
+                  (isInput() ? 'microphone-sensitivity' : 'audio-volume')+'-medium',
+                  (isInput() ? 'microphone-sensitivity' : 'audio-volume')+'-high'
+                ][getLevel()] : (isInput() ? 'microphone-sensitivity' : 'audio-volume')+'-muted')
+		          });
+              hw.audio.setSourceVolumes(source.index,source.volume+'%').then(() => {
+              }).catch(err => {
+                core.make('osjs/dialog','alert',{ message: ex.message, title: ex.name },(btn, value) => {});
+              });
+            }
+          },[]), closeable: false }
+		    ];
+		    entry = core.make('osjs/tray',{
+		      icon: core.make('osjs/theme').icon(!source.muted ? [
+            (isInput() ? 'microphone-sensitivity' : 'audio-volume')+'-low',
+            (isInput() ? 'microphone-sensitivity' : 'audio-volume')+'-medium',
+            (isInput() ? 'microphone-sensitivity' : 'audio-volume')+'-high'
+          ][getLevel()] : (isInput() ? 'microphone-sensitivity' : 'audio-volume')+'-muted'),
+		      title: source.description,
+		      onclick: ev => {
+				    core.make('osjs/contextmenu').show({
+				      position: ev.target,
+				      menu: menu
+				    });
+		      }
+		    });
+        entries.push(entry);
+		  };
+		  for(let source of sources) createEntry(source);
+      proc.on('destroy',() => entries.forEach(entry => entry.destroy()));
+		}).catch(err => {
+      core.make('osjs/dialog','alert',{ message: ex.message, title: ex.name },(btn, value) => {});
+		});
 		core.make('osjs/dbus').systemBus().then(dbus => {
 	    const nmDevHandler = dev => ({
 	      'BRIDGE': () => {},
+	      'GENERIC': () => {},
 	      'ETHERNET': () => {
 	        const devIface = dbus.interface('org.freedesktop.NetworkManager',dev,'org.freedesktop.NetworkManager.Device.Wired');
 	        let devStats = [];
@@ -221,18 +370,19 @@ const register = (core,args,options,metadata) => {
 		      devIface.props().then(props => {
 		        let type = NM_DEVICE_TYPE[props.DeviceType];
 		        console.log('Found a '+type+' device at \"'+dev+'\"');
-		        let devHandler = nmDevHandler(dev)[type] || () => {
-		          core.make('osjs/dialog','alert',{ message: _('DEV_MISSING',type) },(btn, value) => {});
-		        };
-		        devHandler();
+		        let devHandler = nmDevHandler(dev)[type];
+		        if(devHandler) devHandler();
+		        else core.make('osjs/dialog','alert',{ message: _('DEV_MISSING',type) },(btn, value) => {});
 		      }).catch(err => {
 		        throw err;
 		      });
 		    }
 		  }).catch(err => {
-		    throw err;
+		    core.make('osjs/dialog','alert',{ message: ex.message, title: ex.name },(btn, value) => {});
 		  });
-		});
+		}).catch(err => {
+      core.make('osjs/dialog','alert',{ message: ex.message, title: ex.name },(btn, value) => {});
+    });
 		hw.battery.get().then(bat => {
 			if(bat.hasbattery) {
 				var entry = core.make('osjs/tray',{
@@ -268,7 +418,7 @@ const register = (core,args,options,metadata) => {
 				proc.on('destroy',() => entry.destroy());
 			}
 		}).catch(err => {
-			throw err;
+			core.make('osjs/dialog','alert',{ message: ex.message, title: ex.name },(btn, value) => {});
 		});
 		proc.on('destroy',() => {
 			for(var int of intervals) clearInterval(int);

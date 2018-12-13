@@ -14,7 +14,9 @@ const en_US = {
 	DIALOG_WIFI_CONN: 'Connecting to {0}',
 	DIALOG_WIFI_CONN_MSG: 'A password is needed to connect',
 	
-	DEV_MISSING: 'Missing support for {0} network device'
+	DEV_MISSING: 'Missing support for {0} network device',
+	
+	AUDIO_MUTE: 'Mute'
 };
 
 module.exports = {en_US, en_EN: en_US };
